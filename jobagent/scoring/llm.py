@@ -29,12 +29,18 @@ Company: {company}
 Location: {location} ({country})
 Description: {description}
 
+The candidate is a native English speaker. Factor language requirements into the score:
+- Penalise hard non-English language requirements (e.g. "Dutch required", "Deutsch erforderlich").
+- Apply a small penalty for soft non-English preferences (e.g. "French preferred").
+- Note positively if the posting states English is the working language.
+
 Return a JSON object with exactly these keys:
 {{
   "score": <integer 0-100, overall fit>,
   "verdict": "strong" | "possible" | "weak",
   "reasons": [<up to 3 short strings on why it fits>],
   "concerns": [<up to 3 short strings on risks or gaps>],
+  "language_required": "<name of non-English language required, or 'English' if English-only, or null if unclear>",
   "dutch_required": <true|false — does the role require Dutch fluency?>,
   "entry_note": "<one short line on EU-family-member / sponsorship relevance, or empty>"
 }}"""
@@ -127,13 +133,20 @@ def _to_scored(job: JobPosting, data: dict) -> ScoredJob:
             v = [v]
         return [str(x) for x in v][:3]
 
+    concerns = _list("concerns")
+    lang = data.get("language_required")
+    if lang and lang.lower() not in ("english", "null", "none", ""):
+        lang_concern = f"{lang} required"
+        if lang_concern not in concerns:
+            concerns = ([lang_concern] + concerns)[:3]
+
     return ScoredJob(
         job=job,
         score=score,
         verdict=verdict,
         reasons=_list("reasons"),
-        concerns=_list("concerns"),
-        dutch_required=data.get("dutch_required"),
+        concerns=concerns,
+        dutch_required=bool(data.get("dutch_required")),
         entry_note=str(data.get("entry_note", "") or ""),
         scored_by="llm",
     )

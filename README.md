@@ -1,80 +1,156 @@
 # EU Job Agent
 
-Scrapes EU job boards for roles matching your resume, scores them with an open-source LLM (Ollama) and falls back to regex keyword matching.
+A local Python agent that pulls job postings from EU job APIs, scores each one
+against your profile using a local open-source LLM (with a deterministic keyword
+fallback), and writes a ranked markdown digest plus a CSV you can track in a
+spreadsheet.
 
-## Sources
+Built around a clinical-informatics / healthcare-data profile targeting
+Netherlands, Belgium, Germany, France, Ireland, and the UK. Everything is
+configurable in `config.yaml`.
 
-| Source | Countries | API Key? |
-|--------|-----------|----------|
-| [Arbeitnow](https://www.arbeitnow.com/api/job-board-api) | DE, NL, FR, IE, BE, GB | None — public API |
-| [Adzuna](https://developer.adzuna.com/) | DE, NL, FR, IE, GB | Free registration |
-| [Jooble](https://jooble.org/api/about) | DE, NL, FR, IE, BE, GB | Free registration |
+## How it works
 
-## Setup
+```
+config.yaml (profile + queries)
+      |
+      v
+  sources  ──►  Arbeitnow (no key) + Jooble (all 6) + Adzuna (DE,NL,FR,IE,GB)
+      |
+      v
+  dedupe (same role across sources collapses; richer record wins)
+      |
+      v
+  scoring  ──►  Ollama local LLM  ──(if down)──►  keyword fallback
+      |
+      v
+  output/job-matches-<timestamp>.md  +  .csv
+```
+
+The agent uses official, terms-compliant APIs only — no scraping LinkedIn or Indeed.
+
+## Quickstart
 
 ```bash
-# 1. Install dependencies
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Copy and fill in credentials
-cp .env.example .env
-# Edit .env with your Adzuna + Jooble keys
+# Run with no keys (Arbeitnow only), keyword scoring:
+python run.py search --no-llm
 
-# 3. (Optional) Install Ollama + model for LLM matching
-#    https://ollama.com/download
-ollama pull llama3.2
+# See which sources are ready and LLM status:
+python run.py sources
 
-# 4. Run
-python main.py
+# Offline demo — scores built-in samples, no network needed:
+python run.py demo --no-llm
 ```
 
-## Usage
+Reports land in `./output/`.
+
+## Getting the most out of it
+
+### 1. Add a Jooble key (covers all six countries including BE and FR)
 
 ```bash
-# All defaults (all countries, all sources, all queries)
-python main.py
-
-# Filter by country
-python main.py --countries DE NL IE
-
-# Custom search queries
-python main.py --queries "data engineer" "clinical informatics" "analytics engineer"
-
-# Only use Arbeitnow (no API key needed)
-python main.py --sources arbeitnow
-
-# Force regex matching (no Ollama needed)
-python main.py --no-ollama
-
-# Only show strong matches
-python main.py --min-score 0.6
-
-# Skip saving to disk
-python main.py --no-save
+cp .env.example .env
+# put your key in JOOBLE_API_KEY=
 ```
 
-## Matching
+Free key at https://jooble.org/api/about (email request, usually same day).
 
-1. **Ollama (LLM)** — if Ollama is running locally with the configured model, each job is scored 0–1 by the LLM against your full resume. Scores reflect title, skill, and domain alignment.
-2. **Regex fallback** — if Ollama is unreachable or the model isn't available, keyword frequency scoring is used based on must-have and nice-to-have terms from your resume.
+### 2. Add Adzuna for richer DE/NL/FR/IE/GB salary data
 
-Edit `resume.py` to update your profile or tune keyword lists.
+Free key pair at https://developer.adzuna.com/ → `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
 
-## Output
+### 3. Run the local LLM scorer
 
-Results are saved to `output/` as both JSON and CSV, and a ranked summary is printed to the terminal.
+Install Ollama (https://ollama.com), then pull a model:
 
-## Configuration
+```bash
+ollama pull llama3.2          # solid default, fast on a laptop
+# or
+ollama pull qwen2.5:7b-instruct
+# or, if you have the VRAM:
+ollama pull qwen2.5:14b-instruct
+```
 
-All settings can be set via environment variables or `.env`:
+Set `OLLAMA_MODEL` in `.env` to match. With Ollama running:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ADZUNA_APP_ID` | — | Adzuna app ID |
-| `ADZUNA_APP_KEY` | — | Adzuna app key |
-| `JOOBLE_API_KEY` | — | Jooble API key |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `llama3.2` | Model to use |
-| `MIN_MATCH_SCORE` | `0.4` | Display threshold (0–1) |
-| `MAX_JOBS_PER_SOURCE` | `25` | Jobs per source per query per country |
-| `OUTPUT_DIR` | `output` | Where to save results |
+```bash
+python run.py search
+```
+
+The LLM scorer uses `/api/chat` with `format: json` and `temperature: 0.1`. If the
+server is down or a response is malformed, it falls back to the keyword scorer
+per-posting. Every result records whether it was scored by `llm` or `keyword`.
+
+## CLI reference
+
+```bash
+# Live search with all defaults:
+python run.py search
+
+# Filter countries and queries:
+python run.py search --countries nl,de,ie --query "clinical data scientist; data engineer"
+
+# Tune volume and threshold:
+python run.py search --per-source 40 --min-score 55 --top 30
+
+# Force keyword scorer (no Ollama needed):
+python run.py search --no-llm
+
+# Change output directory:
+python run.py search --out ./reports
+
+# Check source and LLM status:
+python run.py sources
+
+# Offline demo (no network):
+python run.py demo --no-llm
+```
+
+## Source coverage
+
+| Source     | Key needed | Countries covered         | Notes                          |
+|------------|------------|---------------------------|--------------------------------|
+| Arbeitnow  | none       | DE, NL, BE, FR, IE, GB   | Works immediately, no key      |
+| Jooble     | free key   | NL, BE, DE, FR, IE, GB   | Primary breadth source         |
+| Adzuna     | free pair  | DE, NL, FR, IE, GB       | No BE; good salary data        |
+
+## Tuning the match
+
+Edit `config.yaml`:
+
+- `profile.skills`, `profile.domains`, `profile.target_titles`,
+  `profile.preferred_locations`, `profile.constraints` feed both the LLM prompt
+  and the keyword scorer.
+- `search.queries` — run against every country on every available source.
+- `search.countries` — `[nl, be, de, fr, ie, gb]` by default.
+- `scoring.min_score` — filter the report (0–100).
+- `scoring.use_llm` — toggle the LLM path.
+
+The keyword scorer awards points for:
+- Skill-term overlap (up to 55 pts)
+- Target-title match (25 pts)
+- Preferred location (12 pts)
+- Penalty for Dutch fluency required (−12 pts)
+
+## Extending it
+
+- **New source:** subclass `JobSource` in `jobagent/sources/`, implement
+  `fetch()` and `available`, add it to `ALL_SOURCES` in `sources/__init__.py`,
+  and list its country coverage in `SUPPORTED` in `sources/base.py`.
+- **AcademicTransfer:** `academictransfer.com` covers Amsterdam UMC, Erasmus MC,
+  and other Dutch academic medical centers — a strong next source to add.
+- **Scheduling:** wrap `python run.py search` in a cron job or launchd agent
+  for a fresh digest on a cadence.
+
+## Environment variables
+
+| Variable         | Default                    | Description                |
+|------------------|----------------------------|----------------------------|
+| `JOOBLE_API_KEY` | —                          | Jooble API key             |
+| `ADZUNA_APP_ID`  | —                          | Adzuna app ID              |
+| `ADZUNA_APP_KEY` | —                          | Adzuna app key             |
+| `OLLAMA_HOST`    | `http://localhost:11434`   | Ollama server URL          |
+| `OLLAMA_MODEL`   | `llama3.2`                 | Model to use               |

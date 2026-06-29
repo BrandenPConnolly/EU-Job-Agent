@@ -1,0 +1,88 @@
+# EU Job Agent — configuration
+# Edit freely. Re-running picks up changes immediately.
+
+profile:
+  headline: >
+    Lead Clinical Informatics Specialist with ~10 years across healthcare data
+    engineering, BI, and ML. Moves predictive models from experimentation to
+    production on Databricks, uses LLMs to extract features from unstructured
+    clinical text, and builds ETL pipelines and executive dashboards for
+    population health. Silver Award for AI Impact, 2025 UC Tech Conference.
+  skills:
+    - Python
+    - R
+    - SQL
+    - T-SQL
+    - Oracle SQL
+    - Spark SQL
+    - Databricks
+    - SQL Server
+    - Oracle
+    - Tableau
+    - Power BI
+    - Crystal Reports
+    - SSIS
+    - SSMS
+    - ETL
+    - Collibra
+    - Jira
+    - Azure DevOps
+    - Epic Clarity
+    - Epic Caboodle
+    - machine learning
+    - predictive modeling
+    - LLM
+    - feature engineering
+    - population health analytics
+    - GCP
+    - PySpark
+    - MLflow
+    - FHIR
+    - HL7
+  domains:
+    - healthcare
+    - clinical informatics
+    - business intelligence
+    - oncology analytics
+    - population health
+    - predictive modeling
+    - value-based care
+    - quality measures
+  target_titles:
+    - clinical data scientist
+    - healthcare data engineer
+    - machine learning engineer
+    - data scientist
+    - ml engineer
+    - clinical informatics
+    - data engineer
+    - analytics engineer
+    - bi developer
+    - business intelligence engineer
+    - informatics specialist
+  preferred_locations:
+    - Netherlands
+    - Amsterdam
+    - Rotterdam
+    - Utrecht
+    - remote
+  constraints:
+    - EU family member (spouse holds EU citizenship) — no employer sponsorship needed.
+    - Open to relocation across DE, NL, FR, IE, BE, and UK.
+    - Prefers English-working teams; Dutch B1 in progress.
+
+search:
+  countries: [nl, be, de, fr, ie, gb]
+  queries:
+    - clinical data scientist
+    - healthcare data engineer
+    - machine learning engineer healthcare
+    - Databricks engineer
+    - Epic Clarity Caboodle
+    - population health analytics
+    - data engineer healthcare
+    - clinical informatics
+
+scoring:
+  use_llm: true      # try Ollama first; falls back to keyword automatically
+  min_score: 40      # drop matches below this from the report

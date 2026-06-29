@@ -1,0 +1,81 @@
+# EU Job Agent — Special Education Teacher profile
+# Run with: python run.py search --config config-sped.yaml
+
+profile:
+  headline: >
+    Special education teacher licensed in Colorado and Wisconsin (USA) with
+    experience supporting students with diverse learning needs including IEP
+    development, differentiated instruction, and inclusive classroom practices.
+    Seeking roles at international schools or EU institutions serving
+    English-speaking or multilingual student populations.
+  skills:
+    - IEP development
+    - differentiated instruction
+    - inclusive education
+    - special education
+    - learning support
+    - behavior intervention
+    - SEND
+    - SEN
+    - autism support
+    - dyslexia support
+    - speech and language support
+    - classroom management
+    - co-teaching
+    - resource room
+    - assistive technology
+    - progress monitoring
+    - parent communication
+    - early intervention
+    - RTI
+    - MTSS
+  domains:
+    - special education
+    - international school
+    - learning support
+    - inclusive education
+    - primary education
+    - secondary education
+    - SEND
+    - SEN
+  target_titles:
+    - special education teacher
+    - SEN teacher
+    - SEND teacher
+    - learning support teacher
+    - inclusion teacher
+    - special needs teacher
+    - resource teacher
+    - educational support teacher
+    - learning support assistant
+    - intervention teacher
+    - EAL teacher
+    - international school teacher
+  preferred_locations:
+    - Netherlands
+    - Amsterdam
+    - Rotterdam
+    - remote
+  constraints:
+    - EU family member (spouse holds EU citizenship) — no employer sponsorship needed.
+    - US teaching licenses in Colorado and Wisconsin; open to equivalency/recognition process.
+    - Prefers English-medium schools (international schools, British curriculum, IB).
+    - Open to relocation across DE, NL, FR, IE, BE, and UK.
+
+search:
+  countries: [nl, be, de, fr, ie, gb]
+  queries:
+    - special education teacher
+    - SEN teacher
+    - SEND teacher
+    - learning support teacher
+    - inclusion teacher international school
+    - special needs teacher international
+    - resource teacher international school
+    - IB school learning support
+    - British school SEN
+    - American school special education
+
+scoring:
+  use_llm: true     # try Ollama first; falls back to keyword automatically
+  min_score: 40

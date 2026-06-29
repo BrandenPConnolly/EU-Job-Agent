@@ -5,9 +5,14 @@ against your profile using a local open-source LLM (with a deterministic keyword
 fallback), and writes a ranked markdown digest plus a CSV you can track in a
 spreadsheet.
 
-Built around a clinical-informatics / healthcare-data profile targeting
-Netherlands, Belgium, Germany, France, Ireland, and the UK. Everything is
-configurable in `config.yaml`.
+Supports multiple profiles via separate config files. Ships with two:
+
+| Config | Profile |
+|--------|---------|
+| `config.yaml` | Clinical informatics / healthcare data engineer |
+| `config-sped.yaml` | Special education teacher (US-licensed, targeting international schools) |
+
+Everything is configurable in the YAML files.
 
 ## How it works
 
@@ -16,6 +21,9 @@ config.yaml (profile + queries)
       |
       v
   sources  ──►  Arbeitnow (no key) + Jooble (all 6) + Adzuna (DE,NL,FR,IE,GB)
+      |
+      v
+  US location filter (drops City, ST / "United States" results)
       |
       v
   dedupe (same role across sources collapses; richer record wins)
@@ -37,6 +45,9 @@ pip install -r requirements.txt
 
 # Run with no keys (Arbeitnow only), keyword scoring:
 python run.py search --no-llm
+
+# Run the special education profile:
+python run.py --config config-sped.yaml search --no-llm
 
 # See which sources are ready and LLM status:
 python run.py sources
@@ -86,9 +97,14 @@ per-posting. Every result records whether it was scored by `llm` or `keyword`.
 
 ## CLI reference
 
+`--config` selects the profile and always goes before the subcommand:
+
 ```bash
-# Live search with all defaults:
+# Clinical informatics profile (default):
 python run.py search
+
+# Special education profile:
+python run.py --config config-sped.yaml search
 
 # Filter countries and queries:
 python run.py search --countries nl,de,ie --query "clinical data scientist; data engineer"
@@ -104,6 +120,7 @@ python run.py search --out ./reports
 
 # Check source and LLM status:
 python run.py sources
+python run.py --config config-sped.yaml sources
 
 # Offline demo (no network):
 python run.py demo --no-llm
@@ -117,9 +134,19 @@ python run.py demo --no-llm
 | Jooble     | free key   | NL, BE, DE, FR, IE, GB   | Primary breadth source         |
 | Adzuna     | free pair  | DE, NL, FR, IE, GB       | No BE; good salary data        |
 
+## Multiple profiles
+
+Each config file is fully self-contained — different profile, queries, countries, and scoring threshold. To add a new profile, copy an existing config and edit it:
+
+```bash
+cp config.yaml config-myprofile.yaml
+# edit config-myprofile.yaml
+python run.py --config config-myprofile.yaml search
+```
+
 ## Tuning the match
 
-Edit `config.yaml`:
+Edit `config.yaml` (or whichever config file you're using):
 
 - `profile.skills`, `profile.domains`, `profile.target_titles`,
   `profile.preferred_locations`, `profile.constraints` feed both the LLM prompt

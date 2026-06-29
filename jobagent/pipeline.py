@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from tqdm import tqdm
+
 from .config import Config
 from .models import JobPosting, ScoredJob
 from .scoring import build_scorer
@@ -32,18 +34,19 @@ def fetch_all(config: Config, per_source: int, verbose: bool = True) -> tuple[li
         if not served:
             continue
         got = 0
-        for query in config.queries:
-            for country in served:
+        tasks = [(q, c) for q in config.queries for c in served]
+        with tqdm(tasks, desc=f"{src.name}", unit="req", leave=False, disable=not verbose) as pbar:
+            for query, country in pbar:
+                pbar.set_postfix(query=query[:20], country=country)
                 try:
                     items = src.fetch(query, country, per_source)
                 except Exception as exc:
-                    if verbose:
-                        print(f"  ! {src.name} error on '{query}'/{country}: {exc}")
+                    tqdm.write(f"  ! {src.name} error on '{query}'/{country}: {exc}")
                     continue
                 postings.extend(items)
                 got += len(items)
         if verbose:
-            print(f"  - {src.name}: {got} postings across {len(served)} countries")
+            tqdm.write(f"  - {src.name}: {got} postings across {len(served)} countries")
         if got:
             used.append(src.name)
 
@@ -67,17 +70,20 @@ def dedupe(postings: list[JobPosting]) -> list[JobPosting]:
 def run(config: Config, per_source: int = 25, force_keyword: bool = False,
         verbose: bool = True) -> RunResult:
     if verbose:
-        print("Fetching postings...")
+        tqdm.write("Fetching postings...")
     raw, used = fetch_all(config, per_source, verbose)
     unique = dedupe(raw)
     if verbose:
-        print(f"Fetched {len(raw)}, {len(unique)} unique after dedupe.")
+        tqdm.write(f"Fetched {len(raw)}, {len(unique)} unique after dedupe.")
 
     scorer, mode = build_scorer(config, force_keyword=force_keyword)
     if verbose:
-        print(f"Scoring with: {mode}")
+        tqdm.write(f"Scoring with: {mode}")
 
-    scored = [scorer.score(job) for job in unique]
+    scored = [
+        scorer.score(job)
+        for job in tqdm(unique, desc="Scoring", unit="job", disable=not verbose)
+    ]
     scored = [s for s in scored if s.score >= config.min_score]
     scored.sort(key=lambda s: s.score, reverse=True)
 
